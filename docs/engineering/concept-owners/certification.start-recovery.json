@@ -1,0 +1,18 @@
+{
+  "name": "认证启动重启恢复与历史投影退休判定",
+  "subject": "certification.start-recovery",
+  "lifecycle": "execution",
+  "authority_kind": "decision",
+  "trust_domain": "main",
+  "fact_kind": "state-machine",
+  "migration_status": "converged",
+  "owner": { "path": "electron/integrationCertification/providerAdapterCoordinator.ts", "symbol": "recoverPreparedStarts" },
+  "write_api": [
+    { "path": "electron/integrationCertification/providerAdapterCoordinator.ts", "symbol": "recoverPreparedStarts" }
+  ],
+  "forbidden_derivations": [],
+  "parity_test": "electron/providerAdapter/projectionRecovery.test.ts",
+  "allowed_consumers": ["electron/providerAdapter/service.ts"],
+  "since": "2026-11-10",
+  "notes": "合同 docs/fixes/2026-11-10-certification-projection-revocation.root-cause.json。恢复先尊重投影 owner 持久化的撤销身份；未撤销且真实遗失的 canonical run 仍失败关闭。旧数据只有 finalized、非空且所有模式 settled、无待决晋升、精确连接确定不存在时才退休；禁用、无密钥、同域兄弟和不可读目录均不等于删除。恢复不调用供应商、不替永久账本结算，也不拥有模型或凭据配置。"
+}

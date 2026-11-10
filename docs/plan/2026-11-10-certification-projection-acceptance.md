@@ -51,3 +51,40 @@ The real fixture is coordinator-captured and credential-free: old run `adapter-r
 - The already-mounted renderer task cache currently merges paged snapshots by union. It can retain an old task until settings are reopened or the application restarts. The coordinator explicitly excluded changing that pre-existing cache behavior from this repair; no pagination/list merge semantics or UI widgets are changed here.
 - Archived ledger tombstones are not scanned by `recoverPreparedStarts` and have no owner data from which to resurrect a run. They remain permanent idempotency evidence. Legacy revisions without a surviving run/activeRevision cannot safely be assigned to a revoked identity; they are not guessed away by vendor-wide deletion during migration.
 - Source tests and a real old-data replay are evidence of local persistence behavior, not evidence that every provider model works. Installed-build restart, existing current-model preservation and zh/en visual results are to be attached by the coordinating line before claiming user-visible completion.
+
+## Push-gate discovery: Windows structural-test path filtering
+
+The first ordinary pre-push run exposed a pre-existing cross-platform test-entry defect in `electron/shared/modelArchetypes/anchorPolicy.structure.test.ts`. Its source walker uses `path.join`, so Windows emits backslashes; exclusion via `endsWith('/index.ts')` and `endsWith('/types.ts')` failed to exclude those framework-owned files. The scanner then treated the legitimate derived `consumesAnchors` assignment in `index.ts` as an authored profile value. Neither this test nor that production file was changed by the initial certification repair.
+
+The coordinating line authorized this acceptance line to change only that test's file-name filter to the already-imported `path.basename`. Both production invariants and all assertion bodies remain unchanged; no production, registry or seed file was edited by this line. This restores the same intended exclusion on Windows and POSIX instead of weakening the authored-profile rule.
+
+- Red: `pnpm exec vitest run electron/shared/modelArchetypes/anchorPolicy.structure.test.ts --reporter=verbose` — 1 failed / 1 passed; `.tmp/anchor-policy-windows-red.log` records the Windows `electron\\shared\\modelArchetypes\\index.ts` false positive.
+- Green: the identical command after the one-line filter change — 2 passed; `.tmp/anchor-policy-windows-green.log`.
+- `git diff --check` passed. No commit or push was performed by this line.
+
+The separate push failures in the side-by-side configuration scan and old-model re-verification were reported to the coordinating/implementation lines. Their corrections received the supplemental acceptance below; a full ordinary pre-push rerun remains the coordinating line's responsibility.
+
+## Supplemental acceptance: automatic candidate disposal and real receipts
+
+The ordinary push gate exposed an introduced class-boundary regression: automatic candidate cleanup called the same catalog deletion transaction as an explicit user disconnect. Recording every such deletion as projection revocation erased the genuine failed self-check receipt before the service could persist it. The old-model upgrade assertion was preserved, and its scenario now additionally runs startup recovery before reading the failure.
+
+The implementation makes this existing intent explicit at the shared transaction boundary: user-facing deletion and the default transaction intent remain `disconnect`, while automatic candidate disposal passes `discard-candidate`. Independent source census found exactly five production automatic deletion calls, all converted:
+
+| Owner | Existing automatic action | Checked intent |
+|---|---|---|
+| `providerAdapter/serviceCatalog.ts` `register` | Delete superseded unpublished candidate connections | `discard-candidate` |
+| `providerAdapter/serviceCatalog.ts` `stage` | Delete superseded unpublished candidate connections | `discard-candidate` |
+| `providerAdapter/serviceCatalog.ts` `fail` | Remove the unpublished failed temporary candidate | `discard-candidate` |
+| `catalog/catalogCommit.ts` `commitOnboardedModelsToCatalog` | Remove superseded manual-onboarding candidates | `discard-candidate` |
+| `catalog/comfyuiWorkflowImportStore.ts` `stageComfyWorkflow` | Remove superseded workflow candidates | `discard-candidate` |
+
+The four superseded lists come from `planStagedVendorIdentity`, which excludes published connections. The failure cleanup retains its existing candidate-lineage and no-published-execution guards. Explicit user deletion still records revocation, as do key/scope invalidation paths. No error-message string determines migration: only a missing projection or the typed synthesized `failed` recovery receipt can be retired. Genuine failed and completed receipts remain readable even when their temporary candidate no longer exists.
+
+After implementation freeze, this line independently executed:
+
+- `pnpm exec vitest run electron/catalog/upgradeKeepsWorkingModels.test.ts electron/providerAdapter/projectionRecovery.test.ts electron/catalog/vendorValidationPersistence.test.ts --reporter=verbose` — **39 passed**, 3 files; `.tmp/certification-recovery-candidate-independent.log`. Includes all old-release request baselines, failed re-verification after restart, genuine failed/completed receipts across two recoveries, explicit disconnect versus candidate disposal, unknown/pending protection, and the captured real Windows CDN fixture (executed, not skipped).
+- `pnpm exec vitest run electron/settings/sideBySideInstallSeed.test.ts electron/shared/modelArchetypes/anchorPolicy.structure.test.ts --reporter=verbose` — **7 passed**, 2 files; `.tmp/certification-recovery-seed-anchor-independent.log`.
+- Independently inspected the coordinating line's seed change: `operations.json` is deliberately not seeded; the actual nested `integration-certification/operations.json` fixture stays absent from Preview and unchanged in the stable source. Audit is not copied as configuration.
+- `git diff --check` passed after the supplemental production freeze and before this report update.
+
+Supplemental verdict: the previously red old-model preservation, side-by-side seed decision and Windows path scanner cases now pass. No blocking finding remains in the revised source/targeted-test scope. The acceptance line made no supplemental production edits and performed no commit, push, live-state change or provider request. Installed final-build restart and ordinary push results remain separate coordinated evidence.

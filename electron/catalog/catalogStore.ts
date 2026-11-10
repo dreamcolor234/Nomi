@@ -729,7 +729,8 @@ export type CatalogMutation = {
   upsertVendor: (payload: unknown) => Vendor;
   upsertApiKey: (vendorKey: string, payload: unknown) => void;
   deleteApiKey: (vendorKey: string) => void;
-  deleteVendor: (vendorKey: string) => void;
+  /** User disconnection revokes validation projections; automatic candidate disposal preserves its real receipt. */
+  deleteVendor: (vendorKey: string, intent?: "disconnect" | "discard-candidate") => void;
   upsertModel: (payload: unknown) => Model;
   upsertMapping: (payload: unknown) => Mapping;
   deleteModelMappings: (vendorKey: string, modelKey: string) => void;
@@ -756,9 +757,9 @@ export function mutateCatalog<T>(fn: (tx: CatalogMutation, state: Readonly<Catal
       invalidateVendorValidation(state, key);
       invalidatedVendors.add(key);
     },
-    deleteVendor: (vendorKey) => {
+    deleteVendor: (vendorKey, intent = "disconnect") => {
       const key = String(vendorKey || "").trim();
-      vendorLineageClosure(state, key).forEach((candidate) => invalidatedVendors.add(candidate));
+      if (intent === "disconnect") vendorLineageClosure(state, key).forEach((candidate) => invalidatedVendors.add(candidate));
       removeVendorLineage(state, key);
     },
     upsertModel: (payload) => applyModelUpsert(state, payload),

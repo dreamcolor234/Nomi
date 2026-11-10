@@ -182,7 +182,7 @@ export const defaultCatalog: ProviderAdapterCatalogPort = {
     const isolatedCandidate = identity.isolated;
     const vendorEnabled = isolatedCandidate ? false : vendorHasPublishedExecution(before, sourceVendorKey);
     return mutateCatalog((tx) => {
-      for (const superseded of identity.supersededVendorKeys) tx.deleteVendor(superseded);
+      for (const superseded of identity.supersededVendorKeys) tx.deleteVendor(superseded, "discard-candidate");
       const vendor = tx.upsertVendor({
         key: targetVendorKey,
         name: input.vendorName || existingVendor?.name || sourceVendor?.name || targetVendorKey,
@@ -261,7 +261,7 @@ export const defaultCatalog: ProviderAdapterCatalogPort = {
     const isolatedCandidate = identity.isolated;
     const vendorEnabled = isolatedCandidate ? false : vendorHasPublishedExecution(before, sourceVendorKey);
     return mutateCatalog((tx) => {
-      for (const superseded of identity.supersededVendorKeys) tx.deleteVendor(superseded);
+      for (const superseded of identity.supersededVendorKeys) tx.deleteVendor(superseded, "discard-candidate");
       const vendor = tx.upsertVendor({
         key: targetVendorKey,
         name: input.vendorName || existingVendor?.name || sourceVendor?.name || targetVendorKey,
@@ -507,7 +507,7 @@ export const defaultCatalog: ProviderAdapterCatalogPort = {
     if (ownedResults.length === 0) return;
     const failedVendor = before.vendors.find((vendor) => vendor.key === run.vendorKey);
     if (candidateSourceVendorKey(failedVendor?.meta) && !vendorHasPublishedExecution(before, run.vendorKey)) {
-      mutateCatalog((tx) => tx.deleteVendor(run.vendorKey));
+      mutateCatalog((tx) => tx.deleteVendor(run.vendorKey, "discard-candidate"));
       return;
     }
     mutateCatalog((tx) => {

@@ -86,12 +86,24 @@ describe('certification projection recovery', () => {
     f.mode('settled');
     f.absent();
     if (present) f.store.upsertRun({ ...f.run, stage: 'failed', updatedAt: RECOVER,
-      error: 'Committed certification lost its canonical run record and was recovered fail-closed.' });
+      recovery: { reasonCode: 'certification_start_rolled_back', userAction: 'restart_certification' }, error: 'Opaque recovered failure' });
     const audit = fs.readFileSync(f.ledgerPath, 'utf8');
     f.coordinator().recoverPreparedStarts();
     f.coordinator().recoverPreparedStarts();
     expect(new ProviderAdapterStore(f.storePath).listRuns()).toEqual([]);
     expect(new ProviderAdapterStore(f.storePath).snapshot()).toMatchObject({ revokedRunIds: [RUN] });
+    expect(fs.readFileSync(f.ledgerPath, 'utf8')).toBe(audit);
+  });
+
+  it.each(['failed', 'completed'] as const)('preserves a genuine %s receipt after its automatic candidate cleanup', (stage) => {
+    const f = fixture(); f.mode('settled'); f.absent();
+    const receipt = { ...f.run, stage, updatedAt: RECOVER, error: stage === 'failed' ? 'Real contract self-check failed' : undefined };
+    f.store.upsertRun(receipt);
+    const audit = fs.readFileSync(f.ledgerPath, 'utf8');
+    f.coordinator().recoverPreparedStarts(); f.coordinator().recoverPreparedStarts();
+    expect(f.store.getRun(RUN)).toMatchObject({ id: RUN, stage });
+    expect(f.store.getRun(RUN)?.error).toBe(receipt.error);
+    expect(f.store.isRunProjectionRevoked(RUN)).toBe(false);
     expect(fs.readFileSync(f.ledgerPath, 'utf8')).toBe(audit);
   });
 

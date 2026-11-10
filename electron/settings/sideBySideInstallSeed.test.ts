@@ -53,12 +53,19 @@ describe('the preview build never shares the stable config', () => {
   it('leaves machine-bound state behind instead of duplicating it', () => {
     fs.writeFileSync(path.join(stableRoot(), 'model-catalog.json'), '{"version":13}', 'utf8')
     for (const name of DELIBERATELY_NOT_SEEDED) fs.writeFileSync(path.join(stableRoot(), name), '{}', 'utf8')
+    const certificationDir = path.join(stableRoot(), 'integration-certification')
+    fs.mkdirSync(certificationDir)
+    const operationPath = path.join(certificationDir, 'operations.json')
+    const unsettledAudit = '{"operations":[{"runId":"stable-only","checkpoint":"submission_unknown"}]}'
+    fs.writeFileSync(operationPath, unsettledAudit, 'utf8')
 
     seedPreview()
 
     for (const name of DELIBERATELY_NOT_SEEDED) {
       expect(fs.existsSync(path.join(previewRoot(), name)), `${name} 明确不该带过去`).toBe(false)
     }
+    expect(fs.existsSync(path.join(previewRoot(), 'integration-certification'))).toBe(false)
+    expect(fs.readFileSync(operationPath, 'utf8')).toBe(unsettledAudit)
   })
 })
 

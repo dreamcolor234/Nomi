@@ -55,3 +55,15 @@
 **无技术必要撤销已安装补丁。** 协调线已报告真安装重启后旧卡消失、无 API 请求，catalog、加密凭据与 ledger 逐字不变；本线的源码审查未发现与该结果相冲突的风险。源码提交仍应等待用户对上述结构拍板。明确限制：已挂载 renderer 的旧任务缓存可能需重新打开设置/重启才消失；旧版本程序不理解新撤销字段，降级会丢失此保证。如用户否决方案，应恢复程序包备份，不能删永久 ledger 或把旧提交改成成功。
 
 特征与类回归：`electron/providerAdapter/projectionRecovery.test.ts`、`electron/providerAdapter/store.test.ts`、`electron/catalog/vendorValidationPersistence.test.ts`；相邻保护为 promotion journal、service、terminal guarantee 与计时 view-model 测试。真实 UI/完整 gates 的结果归协调线交付证据，本线不把未执行项报绿。
+
+## 发布前补充：显式断开与候选清理（2026-11-10）
+
+**独立结论：当前补充仍落实用户已批准的结构方向，无需另作方向请示。** 上文“源码提交等待拍板”是批准前状态；用户已批准且交付范围仍仅 fork，不建上游 PR。
+
+升级矩阵发现本次引入的边界错误：自动清理未发布候选与用户明确断开都调用 `tx.deleteVendor`，因此候选自检失败后，正常清理候选会被误记为用户撤销，把应交给用户的真实失败回执一并拒掉。这证明“目录行已不存在”本身不足以表示“用户不再要这次回执”；原方案要求的是**显式撤销身份**，不能把所有内部删除都升级成撤销意图。
+
+本线重新审阅当前生产 diff 并全仓检索调用，确认五处自动清理都显式传入 `discard-candidate`：`serviceCatalog` 的 register/stage/fail、`catalogCommit` 的接入提交、`comfyuiWorkflowImportStore` 的候选 stage。四处替换仍使用既有未发布 superseded 候选清单，fail 仍要求候选归属且无已发布执行。共用事务默认意图仍是 `disconnect`，用户断开及 Key/范围失效继续撤销；store 的 run-ID 写入准入未放宽。这是在同一边界写清已有两类动作的目的，没有供应商特例或新增恢复架构。
+
+旧数据退役也相应收紧：除原有 finalized、有 settled mode、无 pending promotion、精确连接已不存在外，还必须**没有 run，或 run 是带 `certification_start_rolled_back` 类型原因的合成 failed 恢复记录**。真实 failed/completed 回执保留；识别不依赖错误字符串。永久 ledger、未知提交、幂等绑定及已撤销身份仍按原合同保护。该变化删除了“候选消失就等于用户撤销”的过宽推断，保住 ⑫ 的另一半：用户确实发起的自检必须留下真实结果。
+
+证据归属：本线审阅生产与回归 diff，未重跑测试、未改生产/测试。独立验收线在 `2026-11-10-certification-projection-acceptance.md` 补充记录 **39/39**（升级、恢复、目录失效矩阵）和 **7/7**（配置复制与 Windows 扫描）；协调线报告实施侧七文件 **100/100**。其中失败后重启、真实 failed/completed 连续恢复、显式 disconnect 与候选 disposal 已分别立靶，原升级断言保留。未发现需要撤销用户已批准方向的证据；最终安装与普通推送结果仍由协调线交付。

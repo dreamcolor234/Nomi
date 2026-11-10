@@ -121,6 +121,16 @@ describe("vendor validation persistence invalidation", () => {
     expect(defaultCatalog.hasConnection?.("relay")).toBeUndefined();
   });
 
+  it("preserves a real failure receipt when the service explicitly discards a temporary candidate", async () => {
+    const catalog = await import("./catalogStore");
+    const { ProviderAdapterStore } = await import("../providerAdapter/store");
+    catalog.mutateCatalog((tx) => tx.deleteVendor("relay", "discard-candidate"));
+    const projections = new ProviderAdapterStore(path.join(userDataRoot, "provider-adapters.json"));
+    expect(catalog.readCatalog().vendors.find((vendor) => vendor.key === "relay")).toBeUndefined();
+    expect(projections.getRun("failed-run")?.stage).toBe("failed");
+    expect(projections.isRunProjectionRevoked("failed-run")).toBe(false);
+  });
+
   it.each(["scope", "clear-key", "disable-key", "delete", "missing-run", "transaction-key", "transaction-vendor"] as const)("records revocation across %s and two certification restarts", async (action) => {
     const { OperationLedger } = await import("../integrationCertification/operationLedger");
     const { ProviderAdapterCertificationCoordinator } = await import("../integrationCertification/providerAdapterCoordinator");

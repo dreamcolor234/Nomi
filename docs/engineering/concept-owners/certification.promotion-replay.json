@@ -1,0 +1,18 @@
+{
+  "name": "认证晋升日志的持久化重放与本地发布入口",
+  "subject": "certification.promotion-replay",
+  "lifecycle": "execution",
+  "authority_kind": "writer",
+  "trust_domain": "main",
+  "fact_kind": "durable",
+  "migration_status": "converged",
+  "owner": { "path": "electron/integrationCertification/promotionJournal.ts", "symbol": "PromotionJournal" },
+  "write_api": [
+    { "path": "electron/integrationCertification/promotionJournal.ts", "symbol": "PromotionJournal" }
+  ],
+  "forbidden_derivations": [],
+  "parity_test": "electron/integrationCertification/promotionJournal.test.ts",
+  "allowed_consumers": ["electron/integrationCertification/providerAdapterCoordinator.ts"],
+  "since": "2026-11-10",
+  "notes": "合同 docs/fixes/2026-11-10-certification-projection-revocation.root-cause.json。PromotionJournal 类封装晋升日志的状态写入与重放。调用方可在任何日志改动前通过 shouldReplay 暂停已撤销投影的本地晋升；日志保持原样待决，不被伪造为 aborted、finalized 或远程取消。登记类而非通用方法名 replay，避免把其它仓库的同名重放误认成同一概念。"
+}

@@ -373,7 +373,7 @@ export function commitOnboardedModelsToCatalog(payload: { entries: OnboardedMode
 
   return mutateCatalog((tx) => {
     for (const superseded of new Set(prepared.flatMap((item) => item.supersededVendorKeys))) {
-      tx.deleteVendor(superseded);
+      tx.deleteVendor(superseded, "discard-candidate");
     }
     const writtenVendors = new Set<string>();
     for (const item of prepared) {

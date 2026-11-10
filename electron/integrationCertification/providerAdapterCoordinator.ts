@@ -308,18 +308,19 @@ export class ProviderAdapterCertificationCoordinator {
     const pendingPromotionIds = new Set(this.journal.pendingEntries().map((entry) => entry.runId));
     for (let operation of this.ledger.snapshot().operations) {
       if (this.store.isRunProjectionRevoked(operation.runId)) continue;
+      let run = this.store.getRun(operation.runId);
       const modes = Object.values(operation.modeOperations);
       const exactVendorKey = operation.startTransaction.stagedVendorKey || operation.startTransaction.sourceVendorKey;
       // Historical invalidation deleted projections without a marker. Retire only completely settled,
       // finalized work for a truly absent connection; absence alone is not remote settlement evidence.
       if (operation.checkpoint === "finalized" && modes.length > 0
+        && (!run || (run.stage === "failed" && run.recovery?.reasonCode === "certification_start_rolled_back"))
         && modes.every((mode) => mode.submissionState === "settled")
         && !pendingPromotionIds.has(operation.runId)
         && this.catalog.hasConnection?.(exactVendorKey) === false) {
         this.store.revokeRunProjections([operation.runId]);
         continue;
       }
-      let run = this.store.getRun(operation.runId);
       if (operation.startTransaction.state === "rolled_back") continue;
       if (operation.startTransaction.state === "committed") {
         if (!run) {

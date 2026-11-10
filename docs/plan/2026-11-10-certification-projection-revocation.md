@@ -27,6 +27,10 @@ State v1 gains optional run-ID revocation metadata. Existing files without it lo
 
 `ProviderAdapterStore` owns current projections and their revocation. `OperationLedger` and `PromotionJournal` own audit/settlement, never presentation. Deletion and identity allocation stay distinct. Generated door map is recorded in the root-cause contract; legitimate workers share one write admission boundary.
 
+The shared catalog transaction also carries deletion intent. `disconnect` (the compatible default used by user deletion) revokes current projections; `discard-candidate` removes service-owned temporary catalog state while preserving its genuine result receipt. All five production automatic-deletion calls use the latter: adapter registration, staging and failure cleanup, normal onboarding superseded candidates, and ComfyUI superseded candidates. This is source intent, not permission for a revoked run to write again.
+
+Concept registration follows those distinct responsibilities: `certification.run-projection` registers the store and its revocation write boundary; `certification.start-recovery` registers the coordinator's restart disposition; `certification.promotion-replay` registers the existing `PromotionJournal` class that owns journal mutation and replay. The latter uses the unique class anchor instead of the generic method name `replay`, which also names unrelated repository methods. These three registry JSON files document existing production ownership and add no runtime behavior or audit state; the catalog's existing certification-ownership concept continues deciding who owns a model execution contract.
+
 ## ★3 Alternatives
 
 1. Only skip absent vendors: smaller but misses key/scope invalidation of present connections.
@@ -58,6 +62,7 @@ Windows credential-free old fixture captured by coordinator. Implementation test
 ## ★9 Acceptance and rollback
 
 - Existing deleted CDN record and absent-run form both converge across two restarts, even if the same key is later reused for a new connection.
+- Real failed/completed receipts survive automatic candidate disposal and restart. Legacy cleanup distinguishes the structural recovery marker from genuine results and never uses an error-message string.
 - Scope changes, key disable/clear and delete remove projections permanently; unrelated connections stay unchanged.
 - Revoked async upsert/input writes and canonical duplicate starts cannot resurrect or allocate work.
 - Unrevoked missing run on an existing or uncertain catalog target remains fail-closed.
@@ -97,6 +102,12 @@ Before implementation, the new recovery/store slice failed 7 assertions: explici
 
 Electron production types, ESLint, diff whitespace, boundary ratchet and root-cause contracts pass. The full `tsconfig.test.json` check is separately recorded: 10 errors remain in unrelated production-run fixtures and removed lab-script imports; the changed production and test paths report no errors. Evidence logs are in `.tmp/certification-recovery-*.log`, kept out of the public patch because they include local execution context.
 
-Production freeze contains exactly four emitted modules: `providerAdapter/store`, `providerAdapter/serviceCatalog`, `integrationCertification/providerAdapterCoordinator`, `integrationCertification/promotionJournal`; `providerAdapter/types.ts` adds only the optional state field.
+Final production scope contains seven behavior modules: `providerAdapter/store`, `providerAdapter/serviceCatalog`, `integrationCertification/providerAdapterCoordinator`, `integrationCertification/promotionJournal`, `catalog/catalogStore`, `catalog/catalogCommit`, and `catalog/comfyuiWorkflowImportStore`; `providerAdapter/types.ts` adds only the optional state field. The coordinator's `settings/sideBySideInstallSeed` update explicitly keeps `integration-certification/operations.json` installation-bound and unseeded, with its existing five-test policy suite; it is the eighth emitted module and does not change the audit or seed any execution history into another installation.
+
+## Candidate-cleanup regression caught before publishing
+
+The upgrade compatibility check exposed an introduced regression: `serviceCatalog.fail` automatically discarded a failed candidate using the same transaction deletion operation as user disconnection. The new invalidator consequently revoked the run before its real failed receipt was written. The existing upgrade assertion failed with `undefined` instead of `failed`; two added receipt tests independently proved legacy recovery would also hide genuine failed/completed results after automatic cleanup.
+
+The repair carries explicit deletion intent at the earliest shared catalog mutation boundary and updates every automatic caller. Legacy retirement now accepts only a missing run or a failed projection carrying `recovery.reasonCode=certification_start_rolled_back`; genuine existing results remain intact. The original upgrade assertion is retained and its real failure now also runs through restart recovery. The final corresponding slice passes seven files / 100 tests, Electron types and the vocabulary gate with `VOCAB_BASE_REF=origin/main`.
 
 Independent source acceptance: `docs/plan/2026-11-10-certification-projection-acceptance.md` (`/root/public_transport_review`). The real installed application replay remains coordinated delivery evidence; no completion claim is based on source tests alone.

@@ -330,6 +330,8 @@ describe("the person opens the connection wizard again on a directory an older r
       } as never);
       await adapter.executeRun(started.id);
       await adapter.awaitTerminalWrites?.();
+      // Candidate cleanup is not a user disconnection: recovery must retain this real failure receipt.
+      adapter.resumeInterrupted();
       (adapter as unknown as { stopWatchdog?: () => void }).stopWatchdog?.();
       expect(adapter.getRun(started.id)?.stage, "a video model on a connection with no documented protocol cannot be verified").toBe("failed");
       const after = await snapshotModel(directory, project.id, vendor.key, model.modelKey);

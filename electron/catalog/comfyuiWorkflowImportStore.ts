@@ -284,7 +284,7 @@ function stageComfyWorkflow(input: StageComfyInput): ImportWorkflowResult {
     || before.vendors.find((vendor) => vendor.key === input.sourceVendorKey);
   return mutateCatalog((tx) => {
     // A newer save supersedes only unpublished staged vendors. The active predecessor is never in this list.
-    for (const superseded of identity.supersededVendorKeys) tx.deleteVendor(superseded);
+    for (const superseded of identity.supersededVendorKeys) tx.deleteVendor(superseded, "discard-candidate");
     const vendor = tx.upsertVendor({
       ...(sourceVendor || {}),
       key: identity.vendorKey,

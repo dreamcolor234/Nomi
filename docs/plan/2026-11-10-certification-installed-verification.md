@@ -15,10 +15,10 @@ The credential-free real run/operation was replayed with the original packaged a
 ## Installed package
 
 - Previous version: `0.24.1+refs.20261109.a781258dc`.
-- Installed version: `0.24.1+refs.20261109.a781258dc.recovery.20261110`.
-- Package SHA-256: `dcdb7c1e25d24a596be3f4816c2205125f6783a3de85c43137feac6e76244bad`.
-- Four compiled modules changed: provider adapter store/catalog port and certification coordinator/promotion journal. Package metadata identifies the local patch.
-- All 14,606 other application files retain their original bytes. Existing native multimodal and canvas/reference fixes remain in the application.
+- Final installed version: `0.24.1+refs.20261109.a781258dc.recovery.20261110.2`.
+- Final package SHA-256: `77c975519094514668e7990c87275a6a6dd28b28c98e1e466dbe3ed7ede68d4c`.
+- Eight compiled modules changed: provider adapter store/catalog port, certification coordinator/promotion journal, catalog mutation/commit/ComfyUI staging, and the side-by-side seed exclusion policy. Package metadata identifies the local patch.
+- All 14,602 other application files retain their original bytes. Existing native multimodal and canvas/reference fixes remain in the application. The catalog module was integrated with the installed native provider-normalization change using a three-way source merge and the same TypeScript emitter; Google native normalization was verified in the packaged process.
 - The original package and certification metadata were backed up under `C:/Users/admin/AppData/Local/NomiLocalBackups/before-certification-recovery-20261110`.
 - The application exited through its normal save-and-close flow before replacement. The real application restarted with the original settings and projects directories.
 
@@ -33,13 +33,15 @@ Both Chinese and English model-settings screens were captured and visually inspe
 - `.tmp/installed-recovery-verification.json`
 - `.tmp/installed-recovery-zh.png`
 - `.tmp/installed-recovery-en.png`
-- `C:/Users/admin/AppData/Local/NomiLocalBuilds/certification-recovery-20261110/package-audit.json`
-- Isolated `profile-before`, `profile-final` recovery reports under the same local build directory.
+- `C:/Users/admin/AppData/Local/NomiLocalBuilds/certification-recovery-20261110/final/package-audit.json`
+- Isolated `profile-before` and `profile-complete` recovery reports under the same local build directory. The final package also retained a genuine candidate failure receipt across restart while retiring the old CDN projection.
 
 ## Source validation and limits
 
 See [independent acceptance](2026-11-10-certification-projection-acceptance.md) and [design/root-cause record](2026-11-10-certification-projection-revocation.md). Relevant persistence/recovery/service regressions, Electron compilation, root-cause contracts, ESLint and boundary checks passed.
 
-The full local gates run is not all green. Its log is `.tmp/certification-recovery-gates.log`; failures include Windows/POSIX shell fixtures, Windows path-separator expectations, a symlink `EPERM`, and missing Git fixture objects from the partial clone. Full test type checking also reports errors outside this task's changed files. These are not waived or described as passing, and no upstream merge is claimed.
+The first full local gates run was not all green. Its log is `.tmp/certification-recovery-gates.log`; it included three new concept registrations, which were subsequently added and checked. Other failures include Windows/POSIX shell fixtures, a symlink `EPERM`, missing site/evidence assets and Git fixture objects from the partial clone. Vocabulary checks pass with the documented explicit `VOCAB_BASE_REF=origin/main` for this shallow checkout. Full test type checking also reports errors outside this task's changed files. These are not waived or described as passing, and no upstream merge is claimed.
+
+The initial normal push hook caught an introduced regression: automatic candidate cleanup revoked a real failure receipt. This was fixed by explicit deletion intent at all five automatic cleanup sites, without admitting writes to revoked identities. Genuine failed/completed receipts also survive legacy recovery. The corrected seven-file lifecycle matrix passed all 100 tests; independent upgrade/recovery/catalog validation passed 39 tests, and seed isolation plus Windows anchor scanning passed 7 tests. The seed policy now explicitly excludes permanent certification audit data. The Windows anchor test path filter was corrected without weakening its production assertions.
 
 The already-mounted renderer task cache keeps its existing merge behavior; this delivery verifies reopening/restart and fresh service reads. Unknown remote submissions and pending promotion audit records remain intact; the patch does not settle them, submit new work or add a new reconciliation UI. No paid model generation was needed or performed.

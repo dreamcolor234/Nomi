@@ -24,7 +24,14 @@
     "electron/providerAdapter/store.ts",
     "electron/providerAdapter/serviceCatalog.ts",
     "electron/integrationCertification/providerAdapterCoordinator.ts",
-    "electron/integrationCertification/promotionJournal.ts"
+    "electron/integrationCertification/promotionJournal.ts",
+    "electron/catalog/catalogStore.ts",
+    "electron/catalog/catalogCommit.ts",
+    "electron/catalog/comfyuiWorkflowImportStore.ts",
+    "electron/settings/sideBySideInstallSeed.ts",
+    "docs/engineering/concept-owners/certification.run-projection.json",
+    "docs/engineering/concept-owners/certification.start-recovery.json",
+    "docs/engineering/concept-owners/certification.promotion-replay.json"
   ],
   "entry_points": [
     "Catalog connection/key invalidation",
@@ -42,6 +49,7 @@
     "An unrevoked canonical run that is genuinely missing still recovers fail-closed.",
     "Legacy cleanup requires an absent exact connection, settled operation evidence and no pending promotion; unknown or unsubmitted ambiguous work is not inferred safe.",
     "Recovery failures preserve historical createdAt but initialize terminal timing at recovery, never display record age as execution duration.",
+    "User disconnection revokes projections; service-owned candidate disposal preserves genuine terminal receipts. Legacy cleanup only retires missing or structurally synthesized recovery projections, never genuine existing results.",
     "Current model identities, capabilities, mappings, pricing and credentials are not changed by recovery."
   ],
   "doors": [
@@ -49,6 +57,16 @@
       "kind": "read",
       "path": "electron/capabilityCore/appIntegration.ts",
       "symbol": "listRuns"
+    },
+    {
+      "kind": "read",
+      "path": "electron/catalog/catalogCommit.ts",
+      "symbol": "CatalogMutation"
+    },
+    {
+      "kind": "read",
+      "path": "electron/catalog/catalogStore.ts",
+      "symbol": "CatalogMutation"
     },
     {
       "kind": "read",
@@ -206,9 +224,29 @@
       "symbol": "ProviderAdapterRun"
     },
     {
+      "kind": "read",
+      "path": "electron/settings/sideBySideInstallSeed.ts",
+      "symbol": "STABLE_APP_NAME"
+    },
+    {
+      "kind": "read",
+      "path": "electron/settings/sideBySideInstallSeed.ts",
+      "symbol": "SEEDED_CONFIG_FILES"
+    },
+    {
+      "kind": "write",
+      "path": "electron/ai/onboarding/vendorHealth.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
       "kind": "write",
       "path": "electron/capabilityCore/appIntegrationCanvasShot.ts",
       "symbol": "replay"
+    },
+    {
+      "kind": "write",
+      "path": "electron/capabilityCore/modelOnboarding/dispatch.ts",
+      "symbol": "mutateCatalog"
     },
     {
       "kind": "write",
@@ -217,8 +255,63 @@
     },
     {
       "kind": "write",
+      "path": "electron/catalog/antigravityCatalog.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/catalogCommit.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/catalogCommit.ts",
+      "symbol": "deleteVendor"
+    },
+    {
+      "kind": "write",
       "path": "electron/catalog/catalogStore.ts",
       "symbol": "invalidateProviderAdapterRunsForVendors"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/comfyuiWorkflowImportStore.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/comfyuiWorkflowImportStore.ts",
+      "symbol": "deleteVendor"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/customCallDraft.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/declaredProviderRegistration.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/directKeyCredential.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/modelRetype.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/rendererCatalogMutation.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/validateCandidateCredential.ts",
+      "symbol": "mutateCatalog"
     },
     {
       "kind": "write",
@@ -229,6 +322,11 @@
       "kind": "write",
       "path": "electron/integrationCertification/httpConnector.ts",
       "symbol": "latestRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/integrationCertification/integrationSession.ts",
+      "symbol": "mutateCatalog"
     },
     {
       "kind": "write",
@@ -272,6 +370,16 @@
     },
     {
       "kind": "write",
+      "path": "electron/providerAdapter/serviceCatalog.ts",
+      "symbol": "mutateCatalog"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/serviceCatalog.ts",
+      "symbol": "deleteVendor"
+    },
+    {
+      "kind": "write",
       "path": "electron/providerAdapter/store.ts",
       "symbol": "updateRun"
     },
@@ -284,15 +392,45 @@
       "kind": "write",
       "path": "electron/providerAdapter/terminalGuarantee.ts",
       "symbol": "upsertRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/settings/sideBySideInstallSeed.ts",
+      "symbol": "seedFromStableInstall"
+    },
+    {
+      "kind": "write",
+      "path": "src/api/desktopClient.ts",
+      "symbol": "deleteVendor"
+    },
+    {
+      "kind": "write",
+      "path": "src/ui/onboarding/ComfyuiLocalCard.tsx",
+      "symbol": "deleteVendor"
+    },
+    {
+      "kind": "write",
+      "path": "src/ui/onboarding/vendorDeleteAction.ts",
+      "symbol": "deleteVendor"
+    },
+    {
+      "kind": "write",
+      "path": "src/ui/onboarding/workflowPage/ComfyuiWorkflowSettingsPage.tsx",
+      "symbol": "deleteVendor"
     }
   ],
   "door_reduction": {
-    "before": 48,
-    "after": 48,
-    "why_not": "Generated inventory includes typed projection readers and the distinct store, recovery, worker and publication callers. They remain legitimate; revocation admission stays centralized. Same-named unrelated replay/listRuns callers are inventory over-approximation and retain unchanged behavior."
+    "before": 73,
+    "after": 73,
+    "why_not": "Generated inventory retains catalog transaction callers, projection workers/readers, recovery and publication owners; explicit deletion intent converges at the catalog transaction and projection writes converge at the store. Same-named unrelated replay/listRuns methods remain unchanged. Side-by-side seed readers retain their existing configuration-versus-install-state split."
   },
-  "generality_proof": "Identity-based revocation applies to every vendor and model. Fresh store reads guard all projection writers, while restart uses the same identity markers. Legacy evidence checks are independent of provider names, timestamps and current credentials.",
+  "generality_proof": "Run-identity revocation applies to every vendor and model. Explicit deletion intent at the shared catalog transaction distinguishes user disconnects from all five service-owned candidate disposal callers. Fresh store reads and writes honor persisted revocation; legacy recovery retires only absent or structurally synthesized projections with complete safe audit evidence, preserving genuine receipts.",
   "shared_boundaries": [
+    {
+      "path": "electron/catalog/catalogStore.ts",
+      "symbol": "mutateCatalog",
+      "responsibility": "Carry explicit disconnect versus discard-candidate intent at the shared catalog transaction boundary, so automatic cleanup cannot revoke a genuine result receipt."
+    },
     {
       "path": "electron/providerAdapter/store.ts",
       "symbol": "ProviderAdapterStore",
@@ -305,7 +443,7 @@
     },
     {
       "path": "electron/integrationCertification/promotionJournal.ts",
-      "symbol": "replay",
+      "symbol": "PromotionJournal",
       "responsibility": "Permit the coordinator to withhold revoked local publications without mutating pending audit entries."
     }
   ],
@@ -333,6 +471,18 @@
       "entry_point": "replayPromotions",
       "disposition": "enforced",
       "evidence": "Pending journal evidence is retained while local publication for revoked projections is skipped."
+    },
+    {
+      "path": "electron/catalog/catalogCommit.ts",
+      "entry_point": "commitOnboardedModelsToCatalog",
+      "disposition": "enforced",
+      "evidence": "Superseded onboarding candidates use discard-candidate intent at the shared transaction, preserving real result receipts rather than treating automatic disposal as user disconnect."
+    },
+    {
+      "path": "electron/catalog/comfyuiWorkflowImportStore.ts",
+      "entry_point": "stageComfyWorkflow",
+      "disposition": "enforced",
+      "evidence": "Superseded ComfyUI candidates use the same explicit discard-candidate intent; the active predecessor is not deleted and projection revocation is not inferred from cleanup."
     }
   ],
   "recurrence": {
@@ -341,7 +491,8 @@
     "same_class_scan": [
       "node scripts/door-map.mjs recoverPreparedStarts invalidateProviderAdapterRunsForVendors deleteRunsForVendors upsertRun updateRun finalizePromotion",
       "Read 2026-09-05-vendor-validation-error-persists and 2026-08-28-idempotent-certification-ledger historical decisions together.",
-      "Scanned projection reads/writes, canonical duplicate start, pending promotion replay and terminal compensation."
+      "Scanned projection reads/writes, canonical duplicate start, pending promotion replay and terminal compensation.",
+      "node scripts/door-map.mjs deleteVendor CatalogMutation mutateCatalog seedFromStableInstall SEEDED_CONFIG_FILES STABLE_APP_NAME: all five automatic candidate deletion callers now declare discard-candidate; direct user deletion remains disconnect."
     ]
   },
   "prevention": {
@@ -354,15 +505,20 @@
     "artifacts": [
       "electron/providerAdapter/store.ts",
       "electron/integrationCertification/providerAdapterCoordinator.ts",
-      "electron/integrationCertification/promotionJournal.ts"
+      "electron/integrationCertification/promotionJournal.ts",
+      "electron/catalog/catalogStore.ts"
     ]
   },
   "regression_tests": [
+    "electron/catalog/upgradeKeepsWorkingModels.test.ts",
+    "electron/settings/sideBySideInstallSeed.test.ts",
     "electron/providerAdapter/projectionRecovery.test.ts",
     "electron/providerAdapter/store.test.ts",
     "electron/catalog/vendorValidationPersistence.test.ts"
   ],
   "class_regression_tests": [
+    "electron/catalog/upgradeKeepsWorkingModels.test.ts",
+    "electron/settings/sideBySideInstallSeed.test.ts",
     "electron/providerAdapter/projectionRecovery.test.ts",
     "electron/providerAdapter/store.test.ts",
     "electron/catalog/vendorValidationPersistence.test.ts"
@@ -379,7 +535,7 @@
     "rationale": "Uses existing Nomi filesystem locks, stores, catalog port and audit journals.",
     "exit_criteria": []
   },
-  "migration": "Old stores without revocation metadata remain readable. Settled audit records for absent exact connections can acquire revocation evidence once; unknown work and pending journals are not migrated. Existing current catalog rows are unchanged.",
+  "migration": "Old stores without revocation metadata remain readable. Missing or structurally synthesized projections for finalized, nonempty all-settled audit records may be retired only when their exact connection is absent and no pending promotion exists. Genuine terminal receipts from automatic candidate cleanup stay intact. Unknown work and pending journals are not migrated; no current catalog configuration changes. Installation-bound execution ledgers remain excluded from side-by-side configuration seeding.",
   "residual_risks": [
     "Already-mounted renderer task caches keep their existing paged-merge behavior and may require reopening settings or restarting; this repair guarantees fresh reads and recovery.",
     "Older application versions do not understand projection revocation metadata and cannot preserve this guarantee after downgrade.",

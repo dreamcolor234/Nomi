@@ -1,0 +1,27 @@
+{
+  "name": "认证任务当前投影及显式撤销的持久化边界",
+  "subject": "certification.run-projection",
+  "lifecycle": "projection",
+  "authority_kind": "writer",
+  "trust_domain": "main",
+  "fact_kind": "durable",
+  "migration_status": "converged",
+  "owner": { "path": "electron/providerAdapter/store.ts", "symbol": "ProviderAdapterStore" },
+  "write_api": [
+    { "path": "electron/providerAdapter/store.ts", "symbol": "ProviderAdapterStore" },
+    { "path": "electron/providerAdapter/store.ts", "symbol": "assertProjectionWritable" },
+    { "path": "electron/providerAdapter/store.ts", "symbol": "revokeProjections" },
+    { "path": "electron/providerAdapter/store.ts", "symbol": "invalidateProviderAdapterRunsForVendors" },
+    { "path": "electron/catalog/catalogStore.ts", "symbol": "mutateCatalog" }
+  ],
+  "forbidden_derivations": [],
+  "parity_test": "electron/providerAdapter/projectionRecovery.test.ts",
+  "allowed_consumers": [
+    "electron/catalog/catalogStore.ts",
+    "electron/integrationCertification/providerAdapterCoordinator.ts",
+    "electron/providerAdapter/service.ts",
+    "electron/providerAdapter/terminalGuarantee.ts"
+  ],
+  "since": "2026-11-10",
+  "notes": "合同 docs/fixes/2026-11-10-certification-projection-revocation.root-cause.json。ProviderAdapterStore 只拥有当前任务、输入和修订投影，不拥有永久提交审计。显式连接失效时，同一事务删除投影并记录 revokedRunIds；读、迟到写回和终态发布都服从同一撤销身份。catalogStore.mutateCatalog 在删除入口承接 disconnect / discard-candidate 领域意图：用户断开撤销投影，系统清理临时候选保留真实结果回执；它只接线撤销意图，不成为第二个投影写盘 owner。OperationLedger 与 PromotionJournal 的远程状态、幂等绑定和未知提交证据不因投影撤销被删除或伪造终态。"
+}
