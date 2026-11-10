@@ -20,7 +20,6 @@
     "Genuine missing canonical runs after long offline intervals"
   ],
   "scope_paths": [
-    "electron/catalog/catalogMutation.ts",
     "electron/providerAdapter/types.ts",
     "electron/providerAdapter/store.ts",
     "electron/providerAdapter/serviceCatalog.ts",
