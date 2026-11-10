@@ -20,6 +20,7 @@
     "Genuine missing canonical runs after long offline intervals"
   ],
   "scope_paths": [
+    "electron/catalog/catalogMutation.ts",
     "electron/providerAdapter/types.ts",
     "electron/providerAdapter/store.ts",
     "electron/providerAdapter/serviceCatalog.ts",
@@ -41,7 +42,7 @@
     "Promotion journal replay"
   ],
   "external_sources": [],
-  "internal_only_reason": "The invariant concerns Nomi-owned catalog, projection and audit lifetimes; provider protocols cannot decide whether a local projection was deliberately revoked.",
+  "internal_only_reason": "The invariant concerns Nomi-owned catalog, projection and audit lifetimes; provider protocols cannot decide whether a local projection was deliberately revoked. catalogMutation.ts is a type-only extraction: it has no state access or emitted transaction implementation, so door-map reports its consumers rather than its excluded type declaration. Electron compilation proved the catalog runtime bytes unchanged after extraction.",
   "invariants": [
     "Revoking a projection records its run identity in the same store transaction that removes it.",
     "An explicitly revoked run cannot be reconstructed or written back by a late worker.",
