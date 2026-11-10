@@ -53,13 +53,13 @@ describe('applyCanvasToolCall 不再做第二次校验：等价证明', () => {
   it('① applyProposalBatch 只有 canvasWriteTarget 一个生产调用者；带变量工具名调 applyCanvasToolCall 的只有 proposalTxn', () => {
     const files = productionSources(path.join(ROOT, 'src'))
     const batchCallers = files.filter((file) => /\bapplyProposalBatch\(/.test(fs.readFileSync(file, 'utf8')))
-      .map((file) => path.relative(ROOT, file)).sort()
+      .map((file) => path.relative(ROOT, file).split(path.sep).join('/')).sort()
     expect(batchCallers).toEqual([
       'src/workbench/generationCanvas/agent/canvasWriteTarget.ts',
       'src/workbench/generationCanvas/agent/proposalTxn.ts',
     ])
     const dynamicCallers = files.filter((file) => /\bawait applyCanvasToolCall\(\s*[a-z]/.test(fs.readFileSync(file, 'utf8')))
-      .map((file) => path.relative(ROOT, file))
+      .map((file) => path.relative(ROOT, file).split(path.sep).join('/'))
     expect(dynamicCallers).toEqual(['src/workbench/generationCanvas/agent/proposalTxn.ts'])
     const target = fs.readFileSync(path.join(ROOT, 'src/workbench/generationCanvas/agent/canvasWriteTarget.ts'), 'utf8')
     expect(target).toMatch(/directorWriteSemanticInputSchema\.safeParse\(request\.input\)/)

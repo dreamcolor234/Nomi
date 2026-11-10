@@ -1,5 +1,7 @@
 # Certification projection revocation — independent acceptance
 
+Coordinator supplement: the expanded normal push suite also exercised the existing proposal-caller census. Its two `path.relative` display projections are now normalized to forward slashes for the existing fixed caller assertions on Windows. No production code or expected caller set changed; its two tests pass (`.tmp/certification-single-parse-path.log`).
+
 - Acceptance line: `/root/public_transport_review` (independent of `/root/implement_model_config`).
 - Reviewed: 2026-11-10, Windows, task worktree `certification-recovery/Nomi-native-multimodal`.
 - Contract: `docs/fixes/2026-11-10-certification-projection-revocation.root-cause.json`.
