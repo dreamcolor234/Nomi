@@ -2,6 +2,7 @@ import { revalidatePendingCredential } from '../catalog/validateCandidateCredent
 import {
   extractVendorExtraHeaders,
   mutateCatalog,
+  modelCatalogReadOnlyStatus,
   normalizeProviderKind,
   readCatalog,
 } from "../catalog/catalogStore";
@@ -55,6 +56,8 @@ export type ProviderAdapterCatalogPort = {
   register(input: ProviderAdapterRegisterInput & { vendorKey: string; savedAt: string }): { vendor: Vendor; models: Model[] };
   stage(input: ProviderAdapterConnectionInput & { vendorKey: string; runId: string }): StagedProviderAdapterCatalog;
   findStagedRun?(runId: string): { vendorKey: string; lineageRootVendorKey: string } | null;
+  /** Exact identity existence only; disabled/keyless connections still exist. */
+  hasConnection?(vendorKey: string): boolean | undefined;
   load(vendorKey: string, selectedModelKeys: readonly string[]): LoadedConnection | null | Promise<LoadedConnection | null>;
   promote(input: {
     run: ProviderAdapterRun;
@@ -135,6 +138,10 @@ function connectionIdentity(input: ProviderAdapterConnectionInput): Record<strin
 }
 
 export const defaultCatalog: ProviderAdapterCatalogPort = {
+  hasConnection: (vendorKey) => {
+    const state = readCatalog();
+    return modelCatalogReadOnlyStatus() ? undefined : state.vendors.some((vendor) => vendor.key === vendorKey);
+  },
   register(input) {
     const before = readCatalog();
     // #831：一条连接的身份 = 域名 + 连接名。`input.vendorKey` 只是这一族的 root（host 段）；

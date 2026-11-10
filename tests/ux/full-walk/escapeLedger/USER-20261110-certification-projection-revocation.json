@@ -1,0 +1,22 @@
+{
+  "id": "USER-20261110-certification-projection-revocation",
+  "since": "2026-11-10",
+  "source": "用户模型自检截图：旧 cdn-dragon3api-com 三个图片模型显示 0/3，错误 Committed certification lost its canonical run record and was recovered fail-closed，耗时4597469秒；协调线确认现役同名模型已在newapi连接可用。",
+  "category": "claims-and-outcomes",
+  "problem": "已移除连接的自检UI投影被启动恢复器从永久审计ledger重建，表现为新的三模型失败；旧创建时间与恢复更新时间被误算成53天执行耗时。",
+  "existingInvariants": ["Explicit connection invalidation removes current validation projections while preserving permanent audit evidence."],
+  "ironLaws": [],
+  "useCases": ["删除或更正连接后连续重启两次，已撤销任务不复活，现役模型配置不变。"],
+  "fullWalkJourneys": [],
+  "status": "reviewed",
+  "manualReview": "reviewed",
+  "evidence": [
+    "docs/plan/2026-11-10-certification-projection-revocation.md",
+    "docs/fixes/2026-11-10-certification-projection-revocation.root-cause.json",
+    "electron/providerAdapter/projectionRecovery.test.ts",
+    "electron/catalog/vendorValidationPersistence.test.ts"
+  ],
+  "completionCommits": [],
+  "rootCauseContract": "docs/fixes/2026-11-10-certification-projection-revocation.root-cause.json",
+  "classCheck": {"kind":"matrix","file":"electron/providerAdapter/projectionRecovery.test.ts"}
+}

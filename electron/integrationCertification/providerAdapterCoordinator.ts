@@ -4,7 +4,7 @@ import type { AdapterVerificationResult } from "../providerAdapter/verifier";
 import { redactAdapterSecrets } from "../providerAdapter/redaction";
 import { adapterRunLineageRoot } from "../providerAdapter/serviceRunLifecycle";
 import type { ProviderAdapterCatalogPort, ProviderAdapterPromotionResult, StagedProviderAdapterCatalog } from "../providerAdapter/serviceCatalog";
-import type { ProviderAdapterStore } from "../providerAdapter/store";
+import { ProviderAdapterProjectionRevokedError, type ProviderAdapterStore } from "../providerAdapter/store";
 import type {
   ProviderAdapterCertificationInput,
   ProviderAdapterConnectionInput,
@@ -200,6 +200,7 @@ export class ProviderAdapterCertificationCoordinator {
     canonicalRunId: string,
     reservedOperation: CertificationOperationRecord | undefined,
   ): Promise<ProviderAdapterRun> {
+    if (this.store.isRunProjectionRevoked(canonicalRunId)) throw new ProviderAdapterProjectionRevokedError();
     let run = this.store.getRun(canonicalRunId);
     if (run) return run;
     let operation = reservedOperation || this.ledger.getByRunId(canonicalRunId);
@@ -304,7 +305,20 @@ export class ProviderAdapterCertificationCoordinator {
   }
 
   recoverPreparedStarts(): void {
+    const pendingPromotionIds = new Set(this.journal.pendingEntries().map((entry) => entry.runId));
     for (let operation of this.ledger.snapshot().operations) {
+      if (this.store.isRunProjectionRevoked(operation.runId)) continue;
+      const modes = Object.values(operation.modeOperations);
+      const exactVendorKey = operation.startTransaction.stagedVendorKey || operation.startTransaction.sourceVendorKey;
+      // Historical invalidation deleted projections without a marker. Retire only completely settled,
+      // finalized work for a truly absent connection; absence alone is not remote settlement evidence.
+      if (operation.checkpoint === "finalized" && modes.length > 0
+        && modes.every((mode) => mode.submissionState === "settled")
+        && !pendingPromotionIds.has(operation.runId)
+        && this.catalog.hasConnection?.(exactVendorKey) === false) {
+        this.store.revokeRunProjections([operation.runId]);
+        continue;
+      }
       let run = this.store.getRun(operation.runId);
       if (operation.startTransaction.state === "rolled_back") continue;
       if (operation.startTransaction.state === "committed") {
@@ -326,6 +340,8 @@ export class ProviderAdapterCertificationCoordinator {
             error: "Committed certification lost its canonical run record and was recovered fail-closed.",
             recovery: { reasonCode: "certification_start_rolled_back", userAction: "restart_certification" },
             createdAt: operation.createdAt,
+            stageStartedAt: at,
+            lastProgressAt: at,
             updatedAt: at,
           });
         }
@@ -352,6 +368,8 @@ export class ProviderAdapterCertificationCoordinator {
           error: "Certification start was interrupted before its canonical run was persisted.",
           recovery: { reasonCode: "certification_start_rolled_back", userAction: "restart_certification" },
           createdAt: operation.createdAt,
+          stageStartedAt: at,
+          lastProgressAt: at,
           updatedAt: at,
         });
       }
@@ -367,7 +385,7 @@ export class ProviderAdapterCertificationCoordinator {
       if (run.stage !== "failed") {
         const at = this.now();
         this.store.updateRun(run.id, (current) => ({ ...current, stage: "failed", error: "Certification start was safely rolled back after an interrupted local transaction.",
-          recovery: { reasonCode: "certification_start_rolled_back", userAction: "restart_certification" }, updatedAt: at }));
+          recovery: { reasonCode: "certification_start_rolled_back", userAction: "restart_certification" }, stageStartedAt: at, lastProgressAt: at, updatedAt: at }));
       }
       if (staged) this.catalog.fail(run);
       this.checkpointStart(operation.runId, { state: "rolled_back" });
@@ -526,6 +544,7 @@ export class ProviderAdapterCertificationCoordinator {
     revision: ProviderAdapterRevision;
     verifiedModes: Array<{ modelKey: string; taskKind: ProfileKind }>;
   }): void {
+    if (this.store.isRunProjectionRevoked(input.current.id)) throw new ProviderAdapterProjectionRevokedError();
     const operation = this.ledger.getByRunId(input.current.id);
     if (!operation) throw new Error("Certification operation ledger entry is missing before promotion");
     if (input.completedRun.error) {
@@ -571,11 +590,12 @@ export class ProviderAdapterCertificationCoordinator {
 
   replayPromotions(): void {
     const preexistingUnknown = new Set(
-      this.journal.pendingEntries().filter((entry) => entry.state === "catalog_committing").map((entry) => entry.runId),
+      this.journal.pendingEntries().filter((entry) => entry.state === "catalog_committing" && !this.store.isRunProjectionRevoked(entry.runId)).map((entry) => entry.runId),
     );
     const catalogAccepted = new Set<string>();
     try {
       this.journal.replay({
+        shouldReplay: (entry) => !this.store.isRunProjectionRevoked(entry.runId),
         commitCatalog: (entry): ProviderAdapterPromotionResult => {
         const run = this.store.getRun(entry.runId);
         const revision = this.store.getRevision(entry.proposedRevisionId);

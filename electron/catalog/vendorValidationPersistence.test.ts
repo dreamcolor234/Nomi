@@ -113,4 +113,48 @@ describe("vendor validation persistence invalidation", () => {
       path.join(userDataRoot, "provider-adapters.json"),
     ).listRuns()).toEqual([]);
   });
+
+  it("does not interpret an unreadable catalog as proof that the exact connection was deleted", async () => {
+    const { defaultCatalog } = await import("../providerAdapter/serviceCatalog");
+    expect(defaultCatalog.hasConnection?.("relay")).toBe(true);
+    fs.writeFileSync(path.join(userDataRoot, "model-catalog.json"), "{");
+    expect(defaultCatalog.hasConnection?.("relay")).toBeUndefined();
+  });
+
+  it.each(["scope", "clear-key", "disable-key", "delete", "missing-run", "transaction-key", "transaction-vendor"] as const)("records revocation across %s and two certification restarts", async (action) => {
+    const { OperationLedger } = await import("../integrationCertification/operationLedger");
+    const { ProviderAdapterCertificationCoordinator } = await import("../integrationCertification/providerAdapterCoordinator");
+    const { ProviderAdapterStore } = await import("../providerAdapter/store");
+    const store = await import("./catalogStore");
+    const { defaultCatalog } = await import("../providerAdapter/serviceCatalog");
+    const ledgerPath = path.join(userDataRoot, "integration-certification", "operations.json");
+    const ledger = new OperationLedger(ledgerPath);
+    let operation = ledger.begin({ runId: "failed-run", contractDigest: "a".repeat(64), idempotencyKey: "old-confirmation", lineageRootVendorKey: "relay",
+      sourceVendorKey: "relay", selectedModels: [{ modelKey: "image-v1", labelZh: "Image", kind: "image" }], leaseOwner: "owner", leaseToken: "lease", attempt: 1,
+      childRunRef: { runId: "failed-run", revisionDigest: "a".repeat(64) }, now }).operation!;
+    for (const state of ["run_persisted", "catalog_staged", "committed"] as const) operation = ledger.markStartTransaction("failed-run", {
+      state, expectedRevision: operation.revision, ...(state !== "run_persisted" ? { stagedVendorKey: "relay" } : {}), now,
+    });
+    const audit = fs.readFileSync(ledgerPath, "utf8");
+    const projectionPath = path.join(userDataRoot, "provider-adapters.json");
+    if (action === "missing-run") {
+      const missing = JSON.parse(fs.readFileSync(projectionPath, "utf8"));
+      missing.runs = [];
+      fs.writeFileSync(projectionPath, JSON.stringify(missing));
+    }
+    if (action === "scope") store.upsertModelCatalogVendor({ key: "relay", baseUrlHint: "http://127.0.0.1:43124/v1" });
+    else if (action === "clear-key" || action === "missing-run") store.clearModelCatalogVendorApiKey("relay");
+    else if (action === "disable-key") store.upsertModelCatalogVendorApiKey("relay", { apiKey: "fixture-key", enabled: false });
+    else if (action === "transaction-key") store.mutateCatalog((tx) => tx.deleteApiKey("relay"));
+    else if (action === "transaction-vendor") store.mutateCatalog((tx) => tx.deleteVendor("relay"));
+    else store.deleteModelCatalogVendor("relay");
+    for (let restart = 0; restart < 2; restart += 1) {
+      new ProviderAdapterCertificationCoordinator(new ProviderAdapterStore(projectionPath), defaultCatalog, () => "2026-11-10T00:00:00.000Z", {
+        operationLedger: new OperationLedger(ledgerPath),
+      }).recoverPreparedStarts();
+      expect(new ProviderAdapterStore(projectionPath).listRuns()).toEqual([]);
+    }
+    expect(new ProviderAdapterStore(projectionPath).snapshot()).toMatchObject({ revokedRunIds: ["failed-run"] });
+    expect(fs.readFileSync(ledgerPath, "utf8")).toBe(audit);
+  });
 });

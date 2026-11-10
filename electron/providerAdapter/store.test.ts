@@ -139,6 +139,30 @@ describe("ProviderAdapterStore", () => {
 
     expect(store.getRun("run-1")?.stage).toBe("stale");
   });
+
+  it("rejects delayed projection and input writes after revocation, while accepting a new run identity", () => {
+    const { store, filePath } = createStore();
+    store.upsertRun(run());
+    store.deleteRunsForVendors(new Set(["example-com"]));
+    const fresh = new ProviderAdapterStore(filePath);
+    expect(() => fresh.upsertRun(run())).toThrow(/revoked/i);
+    expect(() => fresh.updateRun("run-1", (current) => current)).toThrow(/revoked/i);
+    expect(() => fresh.setRunInput({ runId: "run-1", docs: "late", updatedAt: "2026-11-10T00:00:00.000Z" })).toThrow(/revoked/i);
+    expect(() => fresh.finalizePromotion({ runId: "run-1", revision: { id: "late-revision", vendorKey: "example-com", digest: "digest",
+      draft: { provider: { baseUrl: "https://example.com", authType: "none" }, sources: [], models: [] }, verifiedModes: [], createdAt: "2026-11-10T00:00:00.000Z" },
+    verifiedModes: [], terminalStage: "completed", finalizedAt: "2026-11-10T00:00:00.000Z" })).toThrow(/revoked/i);
+    expect(fresh.getRun("run-1")).toBeUndefined();
+    expect(fresh.latestRun("example-com")).toBeUndefined();
+    expect(fresh.getRevision("late-revision")).toBeUndefined();
+    const staleWriter = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    staleWriter.runs.push(run());
+    fs.writeFileSync(filePath, JSON.stringify(staleWriter));
+    expect(fresh.getRun("run-1")).toBeUndefined();
+    expect(fresh.latestRun("example-com")).toBeUndefined();
+    expect(fresh.listRuns()).toEqual([]);
+    fresh.upsertRun(run({ id: "run-2" }));
+    expect(fresh.listRuns().map((item) => item.id)).toEqual(["run-2"]);
+  });
 });
 
 describe("connectionFingerprint", () => {

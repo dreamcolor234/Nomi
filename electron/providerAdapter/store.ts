@@ -16,6 +16,7 @@ import type {
   ProviderAdapterStoreState,
 } from "./types";
 import type { PromotionTerminalStage } from "../integrationCertification/types";
+import { OperationLedger } from "../integrationCertification/operationLedger";
 
 const EMPTY_STATE: ProviderAdapterStoreState = { version: 1, revision: 0, runs: [], revisions: [], inputs: [] };
 
@@ -47,6 +48,28 @@ export function isTerminalAdapterStage(stage: ProviderAdapterRun["stage"]): bool
 
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+export class ProviderAdapterProjectionRevokedError extends Error {
+  constructor() {
+    super("Certification projection was revoked when its connection changed; start a new explicit certification instead of reviving this run");
+    this.name = "ProviderAdapterProjectionRevokedError";
+  }
+}
+
+function assertProjectionWritable(state: ProviderAdapterStoreState, runId: string): void {
+  if (state.revokedRunIds?.includes(runId)) throw new ProviderAdapterProjectionRevokedError();
+}
+
+function revokeProjections(state: ProviderAdapterStoreState, ids: ReadonlySet<string>): ProviderAdapterStoreState {
+  const removedRevisions = new Set(state.runs.filter((run) => ids.has(run.id)).map((run) => run.activeRevision));
+  return {
+    ...state,
+    revokedRunIds: [...new Set([...(state.revokedRunIds || []), ...ids])],
+    runs: state.runs.filter((run) => !ids.has(run.id)),
+    revisions: state.revisions.filter((revision) => !removedRevisions.has(revision.id)),
+    inputs: (state.inputs || []).filter((input) => !ids.has(input.runId)),
+  };
 }
 
 const SAFE_REASON_CODES = new Set([
@@ -127,14 +150,18 @@ function loadState(filePath: string): ProviderAdapterStoreState {
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as Partial<ProviderAdapterStoreState>;
     if (parsed.version !== 1 || !Array.isArray(parsed.runs) || !Array.isArray(parsed.revisions)) return clone(EMPTY_STATE);
+    const revokedRunIds = Array.isArray(parsed.revokedRunIds)
+      ? parsed.revokedRunIds.filter((id): id is string => typeof id === "string" && Boolean(id.trim())) : [];
+    const revoked = new Set(revokedRunIds);
     return {
       version: 1,
       revision: Number.isSafeInteger(parsed.revision) && Number(parsed.revision) >= 0 ? Number(parsed.revision) : 0,
-      runs: (parsed.runs as ProviderAdapterRun[]).map(sanitizeRun),
+      runs: (parsed.runs as ProviderAdapterRun[]).filter((run) => !revoked.has(run.id)).map(sanitizeRun),
+      revokedRunIds,
       revisions: parsed.revisions as ProviderAdapterRevision[],
       // 边表是后加的（同一个 version 1，纯增量）：旧文件没有它就是空表，
       // 老版本读新文件也只是多一个它不认识的键，两个方向都不需要迁移。
-      inputs: Array.isArray(parsed.inputs) ? (parsed.inputs as ProviderAdapterRunInput[]) : [],
+      inputs: Array.isArray(parsed.inputs) ? (parsed.inputs as ProviderAdapterRunInput[]).filter((input) => !revoked.has(input.runId)) : [],
     };
   } catch {
     return clone(EMPTY_STATE);
@@ -173,6 +200,16 @@ export class ProviderAdapterStore {
     return found ? clone(found) : undefined;
   }
 
+  isRunProjectionRevoked(id: string): boolean {
+    return this.refresh().revokedRunIds?.includes(id) === true;
+  }
+
+  revokeRunProjections(runIds: readonly string[]): void {
+    const ids = new Set(runIds);
+    if (ids.size === 0) return;
+    this.mutate((fresh) => ({ state: revokeProjections(fresh, ids), result: undefined }));
+  }
+
   latestRun(vendorKey: string): ProviderAdapterRun | undefined {
     const found = [...this.refresh().runs].reverse().find((run) => run.vendorKey === vendorKey);
     return found ? clone(found) : undefined;
@@ -191,6 +228,7 @@ export class ProviderAdapterStore {
   upsertRun(run: ProviderAdapterRun): ProviderAdapterRun {
     const next = clone(sanitizeRun(run));
     return this.mutate((fresh) => {
+      assertProjectionWritable(fresh, run.id);
       const runs = [...fresh.runs];
       const index = runs.findIndex((item) => item.id === run.id);
       if (index >= 0) runs[index] = next;
@@ -201,6 +239,7 @@ export class ProviderAdapterStore {
 
   updateRun(id: string, update: (current: ProviderAdapterRun) => ProviderAdapterRun): ProviderAdapterRun {
     return this.mutate((fresh) => {
+      assertProjectionWritable(fresh, id);
       const runs = [...fresh.runs];
       const index = runs.findIndex((item) => item.id === id);
       if (index < 0) throw new Error(`Provider adapter run not found: ${id}`);
@@ -214,6 +253,7 @@ export class ProviderAdapterStore {
   setRunInput(input: ProviderAdapterRunInput): ProviderAdapterRunInput {
     const next = clone(input);
     return this.mutate((fresh) => {
+      assertProjectionWritable(fresh, input.runId);
       const inputs = [...(fresh.inputs || [])].filter((item) => item.runId !== input.runId);
       inputs.push(next);
       return { state: { ...fresh, inputs }, result: next };
@@ -248,18 +288,18 @@ export class ProviderAdapterStore {
   }
 
   /** Remove durable verification projections when their catalog connection is gone. */
-  deleteRunsForVendors(vendorKeys: ReadonlySet<string>): void {
+  deleteRunsForVendors(vendorKeys: ReadonlySet<string>, additionalRunIds: readonly string[] = []): void {
     if (vendorKeys.size === 0) return;
     this.mutate((fresh) => {
-      const runs = fresh.runs.filter((run) => !vendorKeys.has(run.vendorKey));
-      const keptRunIds = new Set(runs.map((run) => run.id));
+      const ids = new Set([...additionalRunIds, ...fresh.runs.filter((run) => vendorKeys.has(run.vendorKey)).map((run) => run.id)]);
+      const revoked = revokeProjections(fresh, ids);
+      const keptRunIds = new Set(revoked.runs.map((run) => run.id));
       return {
         state: {
-          ...fresh,
-          runs,
-          revisions: fresh.revisions.filter((revision) => !vendorKeys.has(revision.vendorKey)),
+          ...revoked,
+          revisions: revoked.revisions.filter((revision) => !vendorKeys.has(revision.vendorKey)),
           // 输入随它服务的 run 一起消失；留下孤儿输入等于把用户交的文档永久留在盘上。
-          inputs: (fresh.inputs || []).filter((input) => keptRunIds.has(input.runId)),
+          inputs: (revoked.inputs || []).filter((input) => keptRunIds.has(input.runId)),
         },
         result: undefined,
       };
@@ -275,6 +315,7 @@ export class ProviderAdapterStore {
     finalizedAt: string;
   }): ProviderAdapterRun {
     return this.mutate((fresh) => {
+      assertProjectionWritable(fresh, input.runId);
       const runs = [...fresh.runs];
       const revisions = [...fresh.revisions];
       const runIndex = runs.findIndex((run) => run.id === input.runId);
@@ -344,8 +385,14 @@ export class ProviderAdapterStore {
 export function invalidateProviderAdapterRunsForVendors(vendorKeys: ReadonlySet<string>): void {
   if (vendorKeys.size === 0) return;
   const filePath = providerAdapterStorePath();
-  if (!fs.existsSync(filePath)) return;
-  new ProviderAdapterStore(filePath).deleteRunsForVendors(vendorKeys);
+  const ledgerPath = path.join(path.dirname(filePath), "integration-certification", "operations.json");
+  if (!fs.existsSync(filePath) && !fs.existsSync(ledgerPath)) return;
+  // Include a canonical identity even if its UI projection was already lost before this explicit invalidation.
+  // This is read-only: remote submission and permanent idempotency evidence stay in the ledger.
+  const ids = fs.existsSync(ledgerPath) ? new OperationLedger(ledgerPath).snapshot().operations
+    .filter((operation) => vendorKeys.has(operation.startTransaction.stagedVendorKey || operation.startTransaction.sourceVendorKey))
+    .map((operation) => operation.runId) : [];
+  new ProviderAdapterStore(filePath).deleteRunsForVendors(vendorKeys, ids);
 }
 
 export function recoverableAdapterRuns(runs: readonly ProviderAdapterRun[]): ProviderAdapterRun[] {

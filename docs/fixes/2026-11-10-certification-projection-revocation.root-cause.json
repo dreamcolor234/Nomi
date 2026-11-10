@@ -1,0 +1,388 @@
+{
+  "schema_version": 3,
+  "id": "2026-11-10-certification-projection-revocation",
+  "problem_type": "Revoked certification projections resurrect from durable audit records during restart",
+  "detected_by": "user",
+  "recurrence_check_on": "2026-12-10",
+  "invariant_owner_layer": {
+    "layer": "electron/providerAdapter",
+    "tests": [
+      "electron/providerAdapter/projectionRecovery.test.ts"
+    ]
+  },
+  "symptom": "A deleted cdn-dragon3api-com connection reappeared as a failed 0/3 certification with the message Committed certification lost its canonical run record and was recovered fail-closed, and elapsed time counted 53 days.",
+  "direct_cause": "Connection invalidation deletes provider-adapters runs while intentionally retaining the operation ledger. Restart recovery cannot distinguish that deliberate revocation from accidental record loss, and reconstructs a failed projection with an old createdAt but no stageStartedAt.",
+  "class_root": "The durable projection store has no explicit revocation evidence shared by deletion, asynchronous writers and restart recovery. Audit lifetime and current UI projection lifetime are treated as identical.",
+  "affected_population": [
+    "Deleted connections",
+    "Connections whose scope or credentials were invalidated",
+    "Historical records already reconstructed by restart",
+    "Genuine missing canonical runs after long offline intervals"
+  ],
+  "scope_paths": [
+    "electron/providerAdapter/types.ts",
+    "electron/providerAdapter/store.ts",
+    "electron/providerAdapter/serviceCatalog.ts",
+    "electron/integrationCertification/providerAdapterCoordinator.ts",
+    "electron/integrationCertification/promotionJournal.ts"
+  ],
+  "entry_points": [
+    "Catalog connection/key invalidation",
+    "ProviderAdapterStore projection writes",
+    "ProviderAdapterService.resumeInterrupted",
+    "Canonical duplicate start",
+    "Promotion journal replay"
+  ],
+  "external_sources": [],
+  "internal_only_reason": "The invariant concerns Nomi-owned catalog, projection and audit lifetimes; provider protocols cannot decide whether a local projection was deliberately revoked.",
+  "invariants": [
+    "Revoking a projection records its run identity in the same store transaction that removes it.",
+    "An explicitly revoked run cannot be reconstructed or written back by a late worker.",
+    "Audit operations, idempotency bindings, unknown submissions and pending promotions are retained without invented settlement or certification.",
+    "An unrevoked canonical run that is genuinely missing still recovers fail-closed.",
+    "Legacy cleanup requires an absent exact connection, settled operation evidence and no pending promotion; unknown or unsubmitted ambiguous work is not inferred safe.",
+    "Recovery failures preserve historical createdAt but initialize terminal timing at recovery, never display record age as execution duration.",
+    "Current model identities, capabilities, mappings, pricing and credentials are not changed by recovery."
+  ],
+  "doors": [
+    {
+      "kind": "read",
+      "path": "electron/capabilityCore/appIntegration.ts",
+      "symbol": "listRuns"
+    },
+    {
+      "kind": "read",
+      "path": "electron/catalog/comfyuiCandidateLifecycle.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/httpConnector.ts",
+      "symbol": "getRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/httpConnector.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/httpConnector.ts",
+      "symbol": "listRuns"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/integrationSessionRecord.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/promotionJournal.ts",
+      "symbol": "PromotionJournalEntry"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "ProviderAdapterCatalogPort"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "getRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/service.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/integrationCertification/types.ts",
+      "symbol": "PromotionJournalEntry"
+    },
+    {
+      "kind": "read",
+      "path": "electron/productionRun/productionRunRepository.ts",
+      "symbol": "listRuns"
+    },
+    {
+      "kind": "read",
+      "path": "electron/productionRun/stalePresentationSweep.ts",
+      "symbol": "listRuns"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/existingConnection.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/liveHarness.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/registration.ts",
+      "symbol": "ProviderAdapterCatalogPort"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "ProviderAdapterCatalogPort"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "getRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "listRuns"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/serviceCatalog.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/serviceCatalog.ts",
+      "symbol": "ProviderAdapterCatalogPort"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/serviceFallback.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/serviceRunLifecycle.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/serviceVerificationResults.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/store.ts",
+      "symbol": "ProviderAdapterStoreState"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/store.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/store.ts",
+      "symbol": "getRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/terminalGuarantee.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/terminalGuarantee.ts",
+      "symbol": "getRun"
+    },
+    {
+      "kind": "read",
+      "path": "electron/providerAdapter/types.ts",
+      "symbol": "ProviderAdapterRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/capabilityCore/appIntegrationCanvasShot.ts",
+      "symbol": "replay"
+    },
+    {
+      "kind": "write",
+      "path": "electron/capabilityCore/projectAgentProposalReceiptStore.ts",
+      "symbol": "replay"
+    },
+    {
+      "kind": "write",
+      "path": "electron/catalog/catalogStore.ts",
+      "symbol": "invalidateProviderAdapterRunsForVendors"
+    },
+    {
+      "kind": "write",
+      "path": "electron/experience/experienceRepository.ts",
+      "symbol": "replay"
+    },
+    {
+      "kind": "write",
+      "path": "electron/integrationCertification/httpConnector.ts",
+      "symbol": "latestRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "upsertRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "updateRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "replay"
+    },
+    {
+      "kind": "write",
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "finalizePromotion"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "latestRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "recoverPreparedStarts"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "updateRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/service.ts",
+      "symbol": "upsertRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/store.ts",
+      "symbol": "updateRun"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/store.ts",
+      "symbol": "deleteRunsForVendors"
+    },
+    {
+      "kind": "write",
+      "path": "electron/providerAdapter/terminalGuarantee.ts",
+      "symbol": "upsertRun"
+    }
+  ],
+  "door_reduction": {
+    "before": 48,
+    "after": 48,
+    "why_not": "Generated inventory includes typed projection readers and the distinct store, recovery, worker and publication callers. They remain legitimate; revocation admission stays centralized. Same-named unrelated replay/listRuns callers are inventory over-approximation and retain unchanged behavior."
+  },
+  "generality_proof": "Identity-based revocation applies to every vendor and model. Fresh store reads guard all projection writers, while restart uses the same identity markers. Legacy evidence checks are independent of provider names, timestamps and current credentials.",
+  "shared_boundaries": [
+    {
+      "path": "electron/providerAdapter/store.ts",
+      "symbol": "ProviderAdapterStore",
+      "responsibility": "Persist revocation and reject projection resurrection across fresh processes and delayed writers."
+    },
+    {
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "symbol": "recoverPreparedStarts",
+      "responsibility": "Distinguish revoked, safely retired legacy and genuinely missing canonical records while preserving audit state."
+    },
+    {
+      "path": "electron/integrationCertification/promotionJournal.ts",
+      "symbol": "replay",
+      "responsibility": "Permit the coordinator to withhold revoked local publications without mutating pending audit entries."
+    }
+  ],
+  "same_class_entry_points": [
+    {
+      "path": "electron/catalog/catalogStore.ts",
+      "entry_point": "invalidateProviderAdapterRunsForVendors",
+      "disposition": "enforced",
+      "evidence": "Scope changes, key disable/clear and vendor deletion call the same projection revocation boundary."
+    },
+    {
+      "path": "electron/providerAdapter/terminalGuarantee.ts",
+      "entry_point": "upsertRun",
+      "disposition": "enforced",
+      "evidence": "Terminal compensation cannot recreate a revoked run through the store write admission."
+    },
+    {
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "entry_point": "readMaterializingCanonicalRun",
+      "disposition": "enforced",
+      "evidence": "A duplicate idempotency binding remains canonical and cannot allocate another run after revocation."
+    },
+    {
+      "path": "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "entry_point": "replayPromotions",
+      "disposition": "enforced",
+      "evidence": "Pending journal evidence is retained while local publication for revoked projections is skipped."
+    }
+  ],
+  "recurrence": {
+    "classification": "recurring",
+    "reason": "Any connection invalidation followed by restart can trigger the audit/projection mismatch.",
+    "same_class_scan": [
+      "node scripts/door-map.mjs recoverPreparedStarts invalidateProviderAdapterRunsForVendors deleteRunsForVendors upsertRun updateRun finalizePromotion",
+      "Read 2026-09-05-vendor-validation-error-persists and 2026-08-28-idempotent-certification-ledger historical decisions together.",
+      "Scanned projection reads/writes, canonical duplicate start, pending promotion replay and terminal compensation."
+    ]
+  },
+  "prevention": {
+    "kind": "centralized-boundary",
+    "enforcement_path": "electron/providerAdapter/store.ts",
+    "invariant": "An explicitly revoked run identity never becomes an active or failed current projection again.",
+    "failure_mode": "Writes to a revoked identity are rejected; unresolved audit work remains recorded and prevents unsafe repeated submission.",
+    "exception_policy": "none",
+    "strategy": "Persist identity revocation on deletion, consult it on reads/writes and recovery, and perform conservative legacy cleanup only with complete safe evidence.",
+    "artifacts": [
+      "electron/providerAdapter/store.ts",
+      "electron/integrationCertification/providerAdapterCoordinator.ts",
+      "electron/integrationCertification/promotionJournal.ts"
+    ]
+  },
+  "regression_tests": [
+    "electron/providerAdapter/projectionRecovery.test.ts",
+    "electron/providerAdapter/store.test.ts",
+    "electron/catalog/vendorValidationPersistence.test.ts"
+  ],
+  "class_regression_tests": [
+    "electron/providerAdapter/projectionRecovery.test.ts",
+    "electron/providerAdapter/store.test.ts",
+    "electron/catalog/vendorValidationPersistence.test.ts"
+  ],
+  "legacy_paths": {
+    "status": "removed",
+    "removed_paths": [
+      "electron/integrationCertification/providerAdapterCoordinator.ts"
+    ],
+    "rationale": "Unconditional reconstruction of intentionally removed projections is replaced by revocation-aware recovery; missing unrevoked runs retain fail-closed behavior."
+  },
+  "dependency_lifecycle": {
+    "decision": "not-applicable",
+    "rationale": "Uses existing Nomi filesystem locks, stores, catalog port and audit journals.",
+    "exit_criteria": []
+  },
+  "migration": "Old stores without revocation metadata remain readable. Settled audit records for absent exact connections can acquire revocation evidence once; unknown work and pending journals are not migrated. Existing current catalog rows are unchanged.",
+  "residual_risks": [
+    "Already-mounted renderer task caches keep their existing paged-merge behavior and may require reopening settings or restarting; this repair guarantees fresh reads and recovery.",
+    "Older application versions do not understand projection revocation metadata and cannot preserve this guarantee after downgrade.",
+    "Real packaged Windows replay and zh/en installed verification passed without generation requests; this is not evidence that every provider model produces an artifact."
+  ]
+}

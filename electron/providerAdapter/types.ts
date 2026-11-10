@@ -271,6 +271,8 @@ export type ProviderAdapterRunInput = {
 export type ProviderAdapterStoreState = {
   version: 1;
   revision: number;
+  /** Projection revocation is independent of permanent certification/remote audit state. */
+  revokedRunIds?: string[];
   runs: ProviderAdapterRun[];
   revisions: ProviderAdapterRevision[];
   inputs: ProviderAdapterRunInput[];

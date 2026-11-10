@@ -243,6 +243,8 @@ export class PromotionJournal {
   }
 
   replay(input: {
+    /** Withhold a revoked local projection without changing permanent pending audit evidence. */
+    shouldReplay?: (entry: PromotionJournalEntry) => boolean;
     commitCatalog: (entry: PromotionJournalEntry) =>
       | { status: "committed"; committedModes: Array<{ modelKey: string; taskKind: ProfileKind }> }
       | { status: "no-lease" };
@@ -254,6 +256,7 @@ export class PromotionJournal {
       for (const journalId of this.state.entries.map((entry) => entry.journalId)) {
         let entry = this.state.entries.find((item) => item.journalId === journalId)!;
         if (entry.state === "aborted" || (entry.state === "committed" && entry.runFinalizedAt)) continue;
+        if (input.shouldReplay?.(entry) === false) continue;
         if (entry.state === "prepared") {
           entry = this.updateUnlocked(entry.journalId, entry.revision, (current) => ({ ...current, state: "catalog_committing", updatedAt: input.now() }));
         }
