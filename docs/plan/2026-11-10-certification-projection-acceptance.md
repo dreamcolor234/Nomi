@@ -88,3 +88,16 @@ After implementation freeze, this line independently executed:
 - `git diff --check` passed after the supplemental production freeze and before this report update.
 
 Supplemental verdict: the previously red old-model preservation, side-by-side seed decision and Windows path scanner cases now pass. No blocking finding remains in the revised source/targeted-test scope. The acceptance line made no supplemental production edits and performed no commit, push, live-state change or provider request. Installed final-build restart and ordinary push results remain separate coordinated evidence.
+
+## Second push-gate discovery: Windows TypeScript-host path identity
+
+The next ordinary push selected the pre-existing `src/workbench/sessionCleanupCensus.test.ts` and exposed a second platform-specific test-entry defect. Its real source census used native Windows absolute paths as in-memory map keys, while TypeScript normalized root names to forward slashes before calling `CompilerHost.getSourceFile`. Every actual source lookup missed, producing an empty AST census. The existing relative-path inline parser fixtures passed, but the nonempty-census assertion correctly failed; no production cleanup violation was found.
+
+Under the coordinating line's explicit test-only authorization, this line normalized both the in-memory map keys and host lookup to TypeScript's slash format within the existing `parseProgram` boundary. Original registry, production-source and forbidden-cleanup assertions were retained. A backslash and forward-slash source fixture now each traverses the real AST census and must detect the forbidden `closeWhiteboard` call; no mocked result, dropped assertion or production change was used.
+
+- Original solo red: **1 failed / 66 passed**, `.tmp/session-cleanup-windows-red.log`.
+- Red after adding the two separator regression cases but before the parser repair: **2 failed / 67 passed**, `.tmp/session-cleanup-windows-class-red.log`; both the actual Windows census and backslash fixture failed.
+- Identical solo command after repair, `pnpm exec vitest run src/workbench/sessionCleanupCensus.test.ts --reporter=verbose`: **69 passed**, `.tmp/session-cleanup-windows-green.log`.
+- `pnpm exec eslint src/workbench/sessionCleanupCensus.test.ts` and `git diff --check` passed.
+
+This line changed only the test and this report, with no commit/push or live mutation. The coordinating line separately owns the type-only catalog-store size reduction and its emitted-JavaScript parity check.

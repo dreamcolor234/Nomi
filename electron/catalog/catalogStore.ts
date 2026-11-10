@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import type { CatalogMutation } from './catalogMutation';
+export type { CatalogMutation } from './catalogMutation';
 import { deepFreeze, findNonHeaderSafeChar, isJsonRecord, nowIso, type JsonRecord } from "../jsonUtils";
 import { sanitizeName } from "../projects/repository";
 import { configReadFailure, quarantineUnreadableConfigFile, writeConfigFileAtomic } from "../configFileStore";
@@ -724,17 +726,6 @@ export function importModelCatalogPackage(payload: unknown, options?: { conflict
   writeCatalog(state);
   return { imported: { vendors, models, mappings }, kept, conflicts, errors: [] };
 }
-
-export type CatalogMutation = {
-  upsertVendor: (payload: unknown) => Vendor;
-  upsertApiKey: (vendorKey: string, payload: unknown) => void;
-  deleteApiKey: (vendorKey: string) => void;
-  /** User disconnection revokes validation projections; automatic candidate disposal preserves its real receipt. */
-  deleteVendor: (vendorKey: string, intent?: "disconnect" | "discard-candidate") => void;
-  upsertModel: (payload: unknown) => Model;
-  upsertMapping: (payload: unknown) => Mapping;
-  deleteModelMappings: (vendorKey: string, modelKey: string) => void;
-};
 
 /**
  * 单次「读-改-写」事务（P2·根治多步落盘留半截）：读一份内存 state，把 apply* 暴露给 fn 在其上

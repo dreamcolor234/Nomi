@@ -29,13 +29,16 @@ function productionFiles(dir: string): string[] {
 }
 
 function parseProgram(contents: Map<string, string>) {
+  // TypeScript normalizes source paths to forward slashes before asking its host.
+  const sourcePath = (file: string): string => file.replace(/\\/g, '/')
+  const sourcesByPath = new Map([...contents].map(([file, source]) => [sourcePath(file), source]))
   const options: ts.CompilerOptions = { noResolve: true, noLib: true, jsx: ts.JsxEmit.Preserve }
   const host = ts.createCompilerHost(options)
   host.getSourceFile = (file, languageVersion) => {
-    const source = contents.get(file)
+    const source = sourcesByPath.get(sourcePath(file))
     return source === undefined ? undefined : ts.createSourceFile(file, source, languageVersion, true)
   }
-  const program = ts.createProgram([...contents.keys()], options, host)
+  const program = ts.createProgram([...sourcesByPath.keys()], options, host)
   return { sources: program.getSourceFiles(), checker: program.getTypeChecker() }
 }
 
@@ -136,6 +139,11 @@ describe('组件卸载的会话写接口普查', () => {
 })
 
 describe('cleanup 普查解析边界', () => {
+  it.each(['census\\fixture.tsx', 'census/fixture.tsx'])('不同路径分隔符都进入真实 AST 普查：%s', file => {
+    const found = cleanupCensus(new Map([[file, 'useEffect(() => () => closeWhiteboard(id), [])']]))
+    expect(found.filter(call => call.symbol === 'closeWhiteboard')).toHaveLength(1)
+  })
+
   it.each([
     ['箭头 cleanup', 'useEffect(() => () => closeWhiteboard(id), [])', 1],
     ['React layout / 函数表达式', 'React.useLayoutEffect(function () { return function () { closeWhiteboard(id) } }, [])', 1],

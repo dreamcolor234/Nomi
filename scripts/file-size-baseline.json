@@ -561,7 +561,7 @@
     },
     "electron/catalog/catalogStore.ts": {
       "kind": "frozen",
-      "max": 824,
+      "max": 818,
       "reason": "新口径落地时已超线，冻结，按职责逐步拆",
       "topDeclarations": [
         {
